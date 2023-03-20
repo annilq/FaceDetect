@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="身份证" />
+
+    <Button
+        android:id="@+id/btn_idCard_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="读取身份证" />
+
+    <Button
+        android:id="@+id/btn_idCard_end"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="停止读取" />
+
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="社保卡" />
+
+    <Button
+        android:id="@+id/btn_healthCard_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="读取社保卡" />
+
+    <Button
+        android:id="@+id/btn_healthCard_end"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="停止读取" />
+
+    <com.google.android.material.divider.MaterialDivider
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="扫码" />
+
+    <Button
+        android:id="@+id/btn_scan_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="开始扫码" />
+
+    <Button
+        android:id="@+id/btn_scan_end"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="停止扫码" />
+</LinearLayout>
