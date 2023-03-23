@@ -1,75 +1,97 @@
 package com.yunqi.hospital;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
+import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Message;
-import android.os.RemoteException;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.DialogFragment;
 
 import com.blankj.utilcode.util.AppUtils;
-import com.blankj.utilcode.util.DeviceUtils;
 import com.blankj.utilcode.util.NetworkUtils;
 import com.blankj.utilcode.util.SPUtils;
-import com.google.gson.Gson;
 import com.yunqi.hospital.databinding.ActivityWebviewBinding;
 import com.yunqi.hospital.device.DeviceConstant;
-import com.yunqi.hospital.device.DeviceService;
-import com.yunqi.hospital.device.HealthCard;
-import com.yunqi.hospital.device.IDCard;
-import com.yunqi.hospital.device.SDKExecutors;
 import com.yunqi.hospital.network.ApiClient;
 import com.yunqi.hospital.network.ApiObserver;
 import com.yunqi.hospital.network.ApiService;
-import com.yunqi.hospital.network.DownloadAsyncTask;
+import com.zhanyun.cameraface.camera.CameraView;
+import com.zhanyun.cameraface.camera.FaceSDK;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.List;
 
-import cn.hsa.ctp.device.sdk.managerService.aidl.HealthCardReader;
-import cn.hsa.ctp.device.sdk.managerService.aidl.IDCardReader;
-import cn.hsa.ctp.device.sdk.managerService.aidl.OnScanListener;
-import cn.hsa.ctp.device.sdk.managerService.aidl.Scanner;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class WebViewActivity extends AppCompatActivity implements View.OnClickListener {
-    /**
-     * 读身份证
-     */
-    private IDCardReader idCardReader;
-    /**
-     * 扫码
-     */
-    private Scanner scanner;
-    /**
-     * 社保（医保）卡
-     */
-    private HealthCardReader healthCardReader;
 
     private ActivityWebviewBinding binding;
 
-    @Override
-    public void onClick(View view) {
-        switch (view.getId()){
-            case R.id.hardware:
-                loadHomePage();
-                break;
+    private static final String FRAGMENT_DIALOG = "dialog";
+    private static final String TAG = "MainActivity";
+
+    private static final int REQUEST_CAMERA_PERMISSION = 1;
+
+    ImageView mIvFace;
+    private CameraView mCameraView;
+    private Handler mBackgroundHandler;
+    long lastModirTime;
+    private CameraView.Callback mCallback = new CameraView.Callback() {
+
+        @Override
+        public void onCameraOpened(CameraView cameraView) {
+            Log.d(TAG, "onCameraOpened");
         }
-    }
+
+        @Override
+        public void onCameraClosed(CameraView cameraView) {
+            Log.d(TAG, "onCameraClosed");
+        }
+
+        @Override
+        public void onPictureTaken(CameraView cameraView, final byte[] data) {
+            Log.i("take photo", "take photo-------------");
+        }
+
+        @Override
+        public void onPreviewFrame(final byte[] data, final Camera camera) {
+            if (System.currentTimeMillis() - lastModirTime <= 200 || data == null || data.length == 0) {
+                return;
+            }
+            Log.i(TAG, "onPreviewFrame " + (data == null ? null : data.length));
+            getBackgroundHandler().post(new FaceThread(data, camera));
+            lastModirTime = System.currentTimeMillis();
+        }
+    };
 
     public interface OnResultListener {
         void onResult(String result);
@@ -96,20 +118,72 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
         // 处理跨域
 //        webSettings.setAllowUniversalAccessFromFileURLs(true);
 
-        // 支持chrome远程调试
-//        if (BuildConfig.DEBUG) {
-//            WebView.setWebContentsDebuggingEnabled(true);
-//        }
-//
-//        registerNetworkListener();
-//
+//         支持chrome远程调试
+        if (BuildConfig.DEBUG) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
+
+        registerNetworkListener();
+
 //        startTestAlive();
-//
+
 //        DeviceService.getInstance(getApplicationContext()).connect();
 
         loadHomePage();
+//        人脸识别部分
+        mCameraView = findViewById(R.id.camera);
+        mIvFace = findViewById(R.id.iv_face_pic);
+
+        if (mCameraView != null) {
+            mCameraView.addCallback(mCallback);
+        }
     }
 
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.hardware:
+                loadHomePage();
+                break;
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        hideStatusBar();
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
+            ConfirmationDialogFragment.newInstance("为了人脸识别",
+                            new String[]{Manifest.permission.CAMERA},
+                            REQUEST_CAMERA_PERMISSION,
+                            "用户拒绝了")
+                    .show(getSupportFragmentManager(), FRAGMENT_DIALOG);
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+        }
+
+    }
+
+
+    public static class ConfirmationDialogFragment extends DialogFragment {
+        private static final String ARG_MESSAGE = "message";
+        private static final String ARG_PERMISSIONS = "permissions";
+        private static final String ARG_REQUEST_CODE = "request_code";
+        private static final String ARG_NOT_GRANTED_MESSAGE = "not_granted_message";
+
+        public static ConfirmationDialogFragment newInstance(String message,
+                                                             String[] permissions, int requestCode, String notGrantedMessage) {
+            ConfirmationDialogFragment fragment = new ConfirmationDialogFragment();
+            Bundle args = new Bundle();
+            args.putString(ARG_MESSAGE, message);
+            args.putStringArray(ARG_PERMISSIONS, permissions);
+            args.putInt(ARG_REQUEST_CODE, requestCode);
+            args.putString(ARG_NOT_GRANTED_MESSAGE, notGrantedMessage);
+            fragment.setArguments(args);
+            return fragment;
+        }
+    }
     // ===============  Network Listener ==============
 
     private AlertDialog networkDialog;
@@ -171,231 +245,9 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
         binding.webView.post(this::recreate);
     }
 
-    // ===============  Device ==============
-
-    /**
-     * 读取身份证
-     */
-    public void readIdCard(OnResultListener onResultListener) {
-        SDKExecutors.getThreadPoolInstance().submit(() -> {
-            try {
-                if (idCardReader == null) {
-                    idCardReader = DeviceService.getInstance(getApplicationContext()).getIDCard();
-                    idCardReader.setFindCardTimeOut(5000); // 寻卡超时时间
-                    idCardReader.setTimeOut(5000); // 读卡超时时间
-                }
-
-                // 打开设备
-                int openResult = idCardReader.openDevice();
-                if (openResult != 0) {
-                    toast("打开读取设备失败");
-                    return;
-                }
-
-//                // 寻卡
-//                int result = idCardReader.findCard();
-//                if (result == 0x9f) {
-//                    toast("寻身份证成功");
-//                } else {
-//                    toast("寻身份证失败");
-//                    return;
-//                }
-
-                // 读卡
-                Bundle bundle = idCardReader.readBaseMsg();
-                if (bundle != null && bundle.getInt("errorCode") == 0x90) {
-                    IDCard idCard = new IDCard(bundle.getString("name"), bundle.getString("id_number"), bundle.getString("sex")
-                            , bundle.getString("address"), bundle.getString("birth_year") +
-                            bundle.getString("birth_moth") +
-                            bundle.getString("birth_day"));
-
-                    runOnUiThread(() -> onResultListener.onResult(new Gson().toJson(idCard)));
-
-                } else {
-                    toast("读身份证失败");
-                }
-            } catch (Exception e) {
-                toast(e.getMessage());
-                e.printStackTrace();
-            }
-        });
-    }
-
-    /**
-     * 关闭身份证设备
-     */
-    public void closeIdCard() {
-        try {
-            if (idCardReader != null) {
-                idCardReader.closeDevice();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    /**
-     * 读取社保卡
-     */
-
-    public void readHealthCard(OnResultListener onResultListener) {
-        SDKExecutors.getThreadPoolInstance().submit(() -> {
-            try {
-                if (healthCardReader == null) {
-                    healthCardReader = DeviceService.getInstance(getApplicationContext()).getHealthCardReader();
-                }
-
-                Bundle bundle = healthCardReader.readCard(5000);
-                if (bundle != null && bundle.getInt("errorCode") == 0x90) {
-                    HealthCard healthCard = new HealthCard(bundle.getString("name"), bundle.getString("cardNo"), bundle.getString("sex"),
-                            bundle.getString("idCardNo"), bundle.getString("districtCode"), bundle.getString("cardVersion"),
-                            bundle.getString("cardSN"));
-
-                    runOnUiThread(() -> {
-//                        Toast.makeText(WebViewActivity.this, new Gson().toJson(healthCard), Toast.LENGTH_LONG).show();
-                        onResultListener.onResult(new Gson().toJson(healthCard));
-                    });
-                } else {
-                    toast("读社保卡失败");
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-    }
-
-    /**
-     * 关闭社保卡
-     */
-    public void closeHealthCard() {
-        try {
-            if (healthCardReader != null) {
-                healthCardReader.closeDevice();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * 打开扫码设备
-     */
-    public void openScanner(OnResultListener onResultListener) {
-        SDKExecutors.getThreadPoolInstance().submit(() -> {
-            try {
-                if (scanner == null) {
-                    scanner = DeviceService.getInstance(getApplicationContext()).getScanner();
-                }
-                scanner.startScan(5, new OnScanListener.Stub() {
-                    @Override
-                    public void onSuccess(String s) throws RemoteException {
-                        runOnUiThread(() -> onResultListener.onResult(s));
-
-                    }
-
-                    @Override
-                    public void onError(int i) throws RemoteException {
-                        toast("扫码错误 " + i);
-                    }
-
-                    @Override
-                    public void onTimeout() throws RemoteException {
-                        toast("扫码超时");
-                    }
-
-                    @Override
-                    public void onCancel() throws RemoteException {
-                        toast("扫码取消");
-                    }
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
-                toast("扫码异常 " + e.getMessage());
-            }
-        });
-    }
-
-    /**
-     * 关闭扫码设备
-     */
-    public void closeScanner() {
-        try {
-            if (scanner != null) {
-                scanner.stopScan();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     // ============ network request ==================
 
-    private final int MESSAGE_HEART_BEAT = 101; // 心跳
-    private final int MESSAGE_HEART_BEAT_INTERVAL = 3 * 60 * 1000; // 心跳间隔
-
-    private final int MESSAGE_TEST_ALIVE = 102; // 测试服务
-    private final int MESSAGE_TEST_ALIVE_INTERVAL = 10 * 1000; // 测试服务间隔
-
-    @SuppressLint("HandlerLeak")
-    private final Handler mHandler = new Handler() {
-
-        @Override
-        public void handleMessage(@NonNull Message message) {
-            if (message.what == MESSAGE_HEART_BEAT) {
-                sendHeartBeat();
-                sendEmptyMessageDelayed(MESSAGE_HEART_BEAT, MESSAGE_HEART_BEAT_INTERVAL);
-            } else if (message.what == MESSAGE_TEST_ALIVE) {
-                testDeviceAlive();
-                sendEmptyMessageDelayed(MESSAGE_TEST_ALIVE, MESSAGE_TEST_ALIVE_INTERVAL);
-            }
-        }
-    };
-
-    private void startTestAlive() {
-        mHandler.removeMessages(MESSAGE_TEST_ALIVE);
-        mHandler.sendEmptyMessage(MESSAGE_TEST_ALIVE);
-    }
-
-    private void startHeartBeat() {
-        mHandler.removeMessages(MESSAGE_HEART_BEAT);
-        mHandler.sendEmptyMessage(MESSAGE_HEART_BEAT);
-    }
-
-    /**
-     * 发送心跳
-     */
-    private void sendHeartBeat() {
-        if (!NetworkUtils.isConnected())
-            return;
-
-        HashMap<String, String> params = new HashMap<>();
-        params.put("appVersion", AppUtils.getAppVersionName());
-        params.put("breakdown", "0");
-        params.put("token", SPUtils.getInstance().getString(DeviceConstant.SpKey.token));
-
-        ApiClient.getInstance().create(ApiService.class)
-                .heartbeat(params)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new ApiObserver<String>(this) {
-
-                    @Override
-                    public void onSuccess(String resp) {
-                        // do nothing
-                    }
-
-                    @Override
-                    public void onTokenInvalid(String message) {
-                        mHandler.removeMessages(MESSAGE_HEART_BEAT);
-                        getToken(result -> mHandler.sendEmptyMessage(MESSAGE_HEART_BEAT));
-                    }
-                });
-    }
-
-    /**
-     * 测试服务是否可用
-     */
 
     private AlertDialog testDialog;
 
@@ -412,42 +264,8 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
         }
     }
 
-    private void testDeviceAlive() {
-        if (!NetworkUtils.isConnected())
-            return;
 
-        ApiClient.getInstance().create(ApiService.class)
-                .isAlive()
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new ApiObserver<Boolean>(this) {
-
-                    @Override
-                    public void onSuccess(Boolean resp) {
-                        if (resp) {
-                            if (testDialog != null && testDialog.isShowing()) {
-                                testDialog.dismiss();
-                                loadHomePage();
-                            }
-                        } else {
-                            showTestDialog();
-                        }
-                    }
-
-                    @Override
-                    public void onTokenInvalid(String message) {
-                        showTestDialog();
-                    }
-
-                    @Override
-                    public void onFailure(String message) {
-                        showTestDialog();
-                    }
-                });
-    }
-
-
-    private String getDeviceSN() {
+    String getDeviceSN() {
         if (TextUtils.isEmpty(Build.SERIAL) || "unknown".equals(Build.SERIAL)) {
             return "h123456";
         }
@@ -477,9 +295,9 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
 
                         // 2. 开始发送心跳
                         if (TextUtils.isEmpty(SPUtils.getInstance().getString(DeviceConstant.SpKey.token))) {
-                            getToken(result -> startHeartBeat());
+                            getToken(result -> Log.i("token",result));
                         } else {
-                            startHeartBeat();
+
                         }
 
                         // 3. 跳转到首页
@@ -494,8 +312,8 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
     public void getToken(OnResultListener onResultListener) {
         HashMap<String, String> params = new HashMap<>();
         params.put("id", SPUtils.getInstance().getString(DeviceConstant.SpKey.device_id));
-        params.put("ipAddress", NetworkUtils.getIPAddress(true));
-        params.put("macAddress", DeviceUtils.getMacAddress());
+//        params.put("ipAddress", NetworkUtils.getIPAddress(true));
+//        params.put("macAddress", DeviceUtils.getMacAddress());
         try {
             // sha256(授权码+ 设备序列号)
             params.put("refreshToken", sha256(SPUtils.getInstance().getString(DeviceConstant.SpKey.auth_code)
@@ -564,11 +382,6 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
         runOnUiThread(() -> Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show());
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        hideStatusBar();
-    }
 
     public void hideStatusBar() {
         getWindow().getDecorView().setSystemUiVisibility(
@@ -606,8 +419,110 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
     protected void onDestroy() {
         super.onDestroy();
         binding.webView.clearHistory();
-        mHandler.removeCallbacksAndMessages(null);
         NetworkUtils.unregisterNetworkStatusChangedListener(mOnNetworkStatusChangedListener);
-        DeviceService.getInstance(getApplicationContext()).disconnect();
+//        人脸识别
+        if (mBackgroundHandler != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                mBackgroundHandler.getLooper().quitSafely();
+            } else {
+                mBackgroundHandler.getLooper().quit();
+            }
+            mBackgroundHandler = null;
+        }
     }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+    }
+
+    @Override
+    protected void onPause() {
+        mCameraView.stop();
+        super.onPause();
+    }
+    //图像预览
+    private Handler getBackgroundHandler() {
+        if (mBackgroundHandler == null) {
+            HandlerThread thread = new HandlerThread("background");
+            thread.start();
+            mBackgroundHandler = new Handler(thread.getLooper());
+        }
+        return mBackgroundHandler;
+    }
+
+    private class FaceThread implements Runnable {
+        private byte[] mData;
+        private ByteArrayOutputStream mBitmapOutput;
+        private Matrix mMatrix;
+        private Camera mCamera;
+
+        public FaceThread(byte[] data, Camera camera) {
+            mData = data;
+            mBitmapOutput = new ByteArrayOutputStream();
+            mMatrix = new Matrix();
+            int mOrienta = mCameraView.getCameraDisplayOrientation();
+            mMatrix.postRotate(mOrienta * -1);
+            mMatrix.postScale(-1, 1);//默认是前置摄像头，直接写死 -1 。
+            mCamera = camera;
+        }
+
+        @Override
+        public void run() {
+            Log.i(TAG, "thread is run");
+            Bitmap bitmap = null;
+            Bitmap roteBitmap = null;
+            try {
+                Camera.Parameters parameters = mCamera.getParameters();
+                int width = parameters.getPreviewSize().width;
+                int height = parameters.getPreviewSize().height;
+
+                YuvImage yuv = new YuvImage(mData, parameters.getPreviewFormat(), width, height, null);
+                mData = null;
+                yuv.compressToJpeg(new Rect(0, 0, width, height), 100, mBitmapOutput);
+
+                byte[] bytes = mBitmapOutput.toByteArray();
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inPreferredConfig = Bitmap.Config.RGB_565;//必须设置为565，否则无法检测
+                bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+
+                mBitmapOutput.reset();
+                roteBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), mMatrix, false);
+                List<Rect> rects = FaceSDK.detectionBitmap(bitmap, getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+
+                if (null == rects || rects.size() == 0) {
+                    Log.i("janecer", "没有检测到人脸哦");
+                } else {
+                    Log.i("janecer", "检测到有" + rects.size() + "人脸");
+                    Bitmap finalBitmap = bitmap;
+                    runOnUiThread(() -> mIvFace.setImageBitmap(finalBitmap));
+                    for (int i = 0; i < rects.size(); i++) {//返回的rect就是在TexutView上面的人脸对应的实际坐标
+                        Log.i("janecer", "rect : left " + rects.get(i).left + " top " + rects.get(i).top + "  right " + rects.get(i).right + "  bottom " + rects.get(i).bottom);
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                mMatrix = null;
+                if (bitmap != null) {
+                    bitmap.recycle();
+                }
+                if (roteBitmap != null) {
+                    roteBitmap.recycle();
+                }
+
+                if (mBitmapOutput != null) {
+                    try {
+                        mBitmapOutput.close();
+                        mBitmapOutput = null;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
 }

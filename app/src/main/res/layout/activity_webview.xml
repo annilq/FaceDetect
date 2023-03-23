@@ -8,16 +8,59 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <androidx.appcompat.widget.LinearLayoutCompat
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/hardware"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom">
+        android:layout_gravity="bottom"
+        android:text="刷新" />
 
-        <Button
-            android:id="@+id/hardware"
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="bottom"
+        android:background="#99000000">
+
+        <com.zhanyun.cameraface.camera.CameraView
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            android:id="@+id/camera"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            app:facing="front"
+            android:adjustViewBounds="true"
+            android:background="@android:color/black"/>
+        <ImageView
+            android:id="@+id/iv_face_pic"
+            android:layout_width="100dp"
+            android:layout_height="140dp"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentBottom="true"
+            android:src="@mipmap/ic_launcher"
+            />
+
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:bottom="20dp"
-            android:text="刷新" />
-    </androidx.appcompat.widget.LinearLayoutCompat>
+            android:layout_alignParentBottom="true"
+            android:orientation="horizontal"
+            android:weightSum="2">
+
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="startDetect"
+                android:text="开启检测" />
+
+            <Button
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="endDetect"
+                android:text="停止检测" />
+        </LinearLayout>
+    </RelativeLayout>
 </FrameLayout>

@@ -15,7 +15,6 @@ import retrofit2.converter.gson.GsonConverterFactory;
  * 网络请求
  */
 public class ApiClient {
-    public static final String LOCAL_URL = "http://192.168.0.97:8000/";
     public static final String TEST_URL = "http://ybzd.ncyunqi.com/ybzd-zzfw/";
     public static final String RELEASE_URL = "https://school-test.ncyunqi.com/classpad/";
     public static String BASE_URL = RELEASE_URL;
