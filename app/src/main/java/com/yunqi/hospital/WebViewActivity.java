@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
+import android.graphics.drawable.BitmapDrawable;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,6 +17,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebSettings;
@@ -52,7 +54,7 @@ import java.util.List;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
-public class WebViewActivity extends AppCompatActivity implements View.OnClickListener {
+public class WebViewActivity extends AppCompatActivity {
 
     private ActivityWebviewBinding binding;
 
@@ -60,7 +62,7 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
     private static final String TAG = "MainActivity";
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
-
+    private String faceCallBackId;
     ImageView mIvFace;
     private CameraView mCameraView;
     private Handler mBackgroundHandler;
@@ -80,17 +82,21 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
         @Override
         public void onPictureTaken(CameraView cameraView, final byte[] data) {
             Log.i("take photo", "take photo-------------");
+
+            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            Bitmap finalBitmap = bitmap;
+            runOnUiThread(() -> mIvFace.setImageBitmap(finalBitmap));
         }
 
-        @Override
-        public void onPreviewFrame(final byte[] data, final Camera camera) {
-            if (System.currentTimeMillis() - lastModirTime <= 200 || data == null || data.length == 0) {
-                return;
-            }
-            Log.i(TAG, "onPreviewFrame " + (data == null ? null : data.length));
-            getBackgroundHandler().post(new FaceThread(data, camera));
-            lastModirTime = System.currentTimeMillis();
-        }
+//        @Override
+//        public void onPreviewFrame(final byte[] data, final Camera camera) {
+//            if (System.currentTimeMillis() - lastModirTime <= 200 || data == null || data.length == 0) {
+//                return;
+//            }
+//            Log.i(TAG, "onPreviewFrame " + (data == null ? null : data.length));
+//            getBackgroundHandler().post(new FaceThread(data, camera));
+//            lastModirTime = System.currentTimeMillis();
+//        }
     };
 
     public interface OnResultListener {
@@ -114,7 +120,6 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
 
         JSInterface jsInterface = new JSInterface(this);
         binding.webView.addJavascriptInterface(jsInterface, "jsInterface");
-        binding.hardware.setOnClickListener(this);
         // 处理跨域
 //        webSettings.setAllowUniversalAccessFromFileURLs(true);
 
@@ -140,29 +145,24 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
     }
 
     @Override
-    public void onClick(View view) {
-        switch (view.getId()) {
-            case R.id.hardware:
-                loadHomePage();
-                break;
-        }
-    }
-
-    @Override
     protected void onResume() {
         super.onResume();
         hideStatusBar();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
-            ConfirmationDialogFragment.newInstance("为了人脸识别",
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+//            申请成功
+        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.CAMERA)) {
+            ConfirmationDialogFragment
+                    .newInstance("获取相机权限失败",
                             new String[]{Manifest.permission.CAMERA},
                             REQUEST_CAMERA_PERMISSION,
-                            "用户拒绝了")
-                    .show(getSupportFragmentManager(), FRAGMENT_DIALOG);
+                            "没有相机权限，app不能为您进行脸部检测")
+                    .show(getSupportFragmentManager(), "");
         } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},
+                    REQUEST_CAMERA_PERMISSION);
         }
-
     }
 
 
@@ -295,7 +295,7 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
 
                         // 2. 开始发送心跳
                         if (TextUtils.isEmpty(SPUtils.getInstance().getString(DeviceConstant.SpKey.token))) {
-                            getToken(result -> Log.i("token",result));
+                            getToken(result -> Log.i("token", result));
                         } else {
 
                         }
@@ -442,87 +442,124 @@ public class WebViewActivity extends AppCompatActivity implements View.OnClickLi
         mCameraView.stop();
         super.onPause();
     }
+
     //图像预览
-    private Handler getBackgroundHandler() {
-        if (mBackgroundHandler == null) {
-            HandlerThread thread = new HandlerThread("background");
-            thread.start();
-            mBackgroundHandler = new Handler(thread.getLooper());
-        }
-        return mBackgroundHandler;
+//    private Handler getBackgroundHandler() {
+//        if (mBackgroundHandler == null) {
+//            HandlerThread thread = new HandlerThread("background");
+//            thread.start();
+//            mBackgroundHandler = new Handler(thread.getLooper());
+//        }
+//        return mBackgroundHandler;
+//    }
+
+//    private class FaceThread implements Runnable {
+//        private byte[] mData;
+//        private ByteArrayOutputStream mBitmapOutput;
+//        private Matrix mMatrix;
+//        private Camera mCamera;
+//
+//        public FaceThread(byte[] data, Camera camera) {
+//            mData = data;
+//            mBitmapOutput = new ByteArrayOutputStream();
+//            mMatrix = new Matrix();
+//            int mOrienta = mCameraView.getCameraDisplayOrientation();
+//            mMatrix.postRotate(mOrienta * -1);
+//            mMatrix.postScale(-1, 1);//默认是前置摄像头，直接写死 -1 。
+//            mCamera = camera;
+//        }
+//
+//        @Override
+//        public void run() {
+//            Log.i(TAG, "thread is run");
+//            Bitmap bitmap = null;
+//            Bitmap roteBitmap = null;
+//            try {
+//                Camera.Parameters parameters = mCamera.getParameters();
+//                int width = parameters.getPreviewSize().width;
+//                int height = parameters.getPreviewSize().height;
+//
+//                YuvImage yuv = new YuvImage(mData, parameters.getPreviewFormat(), width, height, null);
+//                mData = null;
+//                yuv.compressToJpeg(new Rect(0, 0, width, height), 100, mBitmapOutput);
+//
+//                byte[] bytes = mBitmapOutput.toByteArray();
+//                BitmapFactory.Options options = new BitmapFactory.Options();
+//                options.inPreferredConfig = Bitmap.Config.RGB_565;//必须设置为565，否则无法检测
+//                bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+//
+//                mBitmapOutput.reset();
+//                roteBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), mMatrix, false);
+//                List<Rect> rects = FaceSDK.detectionBitmap(bitmap, getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
+//
+//                if (null == rects || rects.size() == 0) {
+//                    Log.i("janecer", "没有检测到人脸哦");
+//                } else {
+//                    Log.i("janecer", "检测到有" + rects.size() + "人脸");
+////                    可以在识别人脸时候马上结束，也可以用户拍照
+////                    Bitmap finalBitmap = bitmap;
+////                    runOnUiThread(() -> mIvFace.setImageBitmap(finalBitmap));
+////                    mCameraView.stop();
+//                    for (int i = 0; i < rects.size(); i++) {//返回的rect就是在TexutView上面的人脸对应的实际坐标
+//                        Log.i("janecer", "rect : left " + rects.get(i).left + " top " + rects.get(i).top + "  right " + rects.get(i).right + "  bottom " + rects.get(i).bottom);
+//                    }
+//                }
+//
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            } finally {
+//                mMatrix = null;
+//                if (bitmap != null) {
+//                    bitmap.recycle();
+//                }
+//                if (roteBitmap != null) {
+//                    roteBitmap.recycle();
+//                }
+//
+//                if (mBitmapOutput != null) {
+//                    try {
+//                        mBitmapOutput.close();
+//                        mBitmapOutput = null;
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+//        }
+//    }
+
+    public void scanFace(String callbackId) {
+        faceCallBackId = callbackId;
+        binding.cameralayer.setVisibility(View.VISIBLE);
+        mCameraView.start();
     }
 
-    private class FaceThread implements Runnable {
-        private byte[] mData;
-        private ByteArrayOutputStream mBitmapOutput;
-        private Matrix mMatrix;
-        private Camera mCamera;
-
-        public FaceThread(byte[] data, Camera camera) {
-            mData = data;
-            mBitmapOutput = new ByteArrayOutputStream();
-            mMatrix = new Matrix();
-            int mOrienta = mCameraView.getCameraDisplayOrientation();
-            mMatrix.postRotate(mOrienta * -1);
-            mMatrix.postScale(-1, 1);//默认是前置摄像头，直接写死 -1 。
-            mCamera = camera;
-        }
-
-        @Override
-        public void run() {
-            Log.i(TAG, "thread is run");
-            Bitmap bitmap = null;
-            Bitmap roteBitmap = null;
-            try {
-                Camera.Parameters parameters = mCamera.getParameters();
-                int width = parameters.getPreviewSize().width;
-                int height = parameters.getPreviewSize().height;
-
-                YuvImage yuv = new YuvImage(mData, parameters.getPreviewFormat(), width, height, null);
-                mData = null;
-                yuv.compressToJpeg(new Rect(0, 0, width, height), 100, mBitmapOutput);
-
-                byte[] bytes = mBitmapOutput.toByteArray();
-                BitmapFactory.Options options = new BitmapFactory.Options();
-                options.inPreferredConfig = Bitmap.Config.RGB_565;//必须设置为565，否则无法检测
-                bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
-
-                mBitmapOutput.reset();
-                roteBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), mMatrix, false);
-                List<Rect> rects = FaceSDK.detectionBitmap(bitmap, getResources().getDisplayMetrics().widthPixels, getResources().getDisplayMetrics().heightPixels);
-
-                if (null == rects || rects.size() == 0) {
-                    Log.i("janecer", "没有检测到人脸哦");
-                } else {
-                    Log.i("janecer", "检测到有" + rects.size() + "人脸");
-                    Bitmap finalBitmap = bitmap;
-                    runOnUiThread(() -> mIvFace.setImageBitmap(finalBitmap));
-                    for (int i = 0; i < rects.size(); i++) {//返回的rect就是在TexutView上面的人脸对应的实际坐标
-                        Log.i("janecer", "rect : left " + rects.get(i).left + " top " + rects.get(i).top + "  right " + rects.get(i).right + "  bottom " + rects.get(i).bottom);
-                    }
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                mMatrix = null;
-                if (bitmap != null) {
-                    bitmap.recycle();
-                }
-                if (roteBitmap != null) {
-                    roteBitmap.recycle();
-                }
-
-                if (mBitmapOutput != null) {
-                    try {
-                        mBitmapOutput.close();
-                        mBitmapOutput = null;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
+    public void cancelDetect(View view) {
+        mCameraView.stop();
+        binding.cameralayer.setVisibility(View.GONE);
+        mIvFace.setImageDrawable(null);
+        this.loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','')");
     }
 
+    public void endDetect(View view) {
+        Bitmap bitmap = ((BitmapDrawable) mIvFace.getDrawable()).getBitmap();
+// 将Bitmap对象转换为字节数组，并使用Base64编码将其转换为字符串
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+        byte[] byteArray = byteArrayOutputStream.toByteArray();
+        String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
+        mCameraView.stop();
+        binding.cameralayer.setVisibility(View.GONE);
+        mIvFace.setImageDrawable(null);
+        this.loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','" + encoded + "')");
+    }
+
+    public void takePhoto(View view) {
+        mCameraView.takePicture();
+    }
+
+    public void reload(View view) {
+//        loadHomePage();
+        this.scanFace("111");
+    }
 }

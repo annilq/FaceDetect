@@ -41,6 +41,6 @@ public class JSInterface {
     }
     @JavascriptInterface
     public void scanFace(String callbackId) {
-//        webViewActivity.startDetect("javascript:NativeBridge.NativeCallback('" + callbackId + "')");
+        webViewActivity.scanFace("javascript:NativeBridge.NativeCallback('" + callbackId + "')");
     }
 }
