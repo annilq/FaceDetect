@@ -1,7 +1,6 @@
 package com.yunqi.hospital;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -130,7 +129,6 @@ public class WebViewActivity extends AppCompatActivity {
 
         registerNetworkListener();
 
-//        startTestAlive();
 
 //        DeviceService.getInstance(getApplicationContext()).connect();
 
@@ -241,28 +239,7 @@ public class WebViewActivity extends AppCompatActivity {
         binding.webView.post(() -> binding.webView.loadUrl(url));
     }
 
-    public void reLaunch() {
-        binding.webView.post(this::recreate);
-    }
-
-
     // ============ network request ==================
-
-
-    private AlertDialog testDialog;
-
-    private void showTestDialog() {
-        if (testDialog == null) {
-            testDialog = new AlertDialog.Builder(WebViewActivity.this)
-                    .setTitle("温馨提示")
-                    .setMessage("\n服务暂不可用\n\n请稍后...")
-                    .setCancelable(false)
-                    .create();
-        }
-        if (!testDialog.isShowing()) {
-            testDialog.show();
-        }
-    }
 
 
     String getDeviceSN() {
@@ -527,7 +504,6 @@ public class WebViewActivity extends AppCompatActivity {
 //            }
 //        }
 //    }
-
     public void scanFace(String callbackId) {
         faceCallBackId = callbackId;
         binding.cameralayer.setVisibility(View.VISIBLE);
@@ -561,5 +537,24 @@ public class WebViewActivity extends AppCompatActivity {
     public void reload(View view) {
 //        loadHomePage();
         this.scanFace("111");
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case REQUEST_CAMERA_PERMISSION:
+                if (permissions.length != 1 || grantResults.length != 1) {
+//                    throw new RuntimeException("Error on requesting camera permission.");
+                    Toast.makeText(this, "没有取到拍照权限",
+                            Toast.LENGTH_SHORT).show();
+                }
+                if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "获取到拍照权限",
+                            Toast.LENGTH_SHORT).show();
+                }
+                // No need to start camera here; it is handled by onResume
+                break;
+        }
     }
 }

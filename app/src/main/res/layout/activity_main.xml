@@ -1,71 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/preview"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="10dp">
+    android:layout_height="match_parent">
 
-    <TextView
+    <WebView
+        android:id="@+id/webView"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="身份证" />
+        android:layout_height="match_parent" />
 
     <Button
-        android:id="@+id/btn_idCard_start"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="读取身份证" />
+        android:layout_gravity="bottom"
+        android:onClick="scanFace"
+        android:text="刷新" />
 
-    <Button
-        android:id="@+id/btn_idCard_end"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="停止读取" />
-
-
-    <com.google.android.material.divider.MaterialDivider
+    <LinearLayout
+        android:id="@+id/cameralayer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp" />
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:background="#99000000"
+        android:orientation="vertical"
+        android:visibility="gone"
+        >
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="社保卡" />
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="40dp">
 
-    <Button
-        android:id="@+id/btn_healthCard_start"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="读取社保卡" />
+            <SurfaceView
+                android:id="@+id/camerapreview"
+                android:layout_width="400dp"
+                android:layout_height="200dp"
+                android:background="#99000000" />
 
-    <Button
-        android:id="@+id/btn_healthCard_end"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="停止读取" />
+            <ImageView
+                android:id="@+id/iv_face_pic"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:layout_gravity="bottom|end" />
+        </FrameLayout>
 
-    <com.google.android.material.divider.MaterialDivider
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:text="扫码" />
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="10dp"
+                android:onClick="cancelDetect"
+                android:text="取消" />
 
-    <Button
-        android:id="@+id/btn_scan_start"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="开始扫码" />
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="10dp"
+                android:onClick="takePhoto"
+                android:text="消课" />
 
-    <Button
-        android:id="@+id/btn_scan_end"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="停止扫码" />
-</LinearLayout>
+<!--            <Button-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:onClick="endDetect"-->
+<!--                android:text="确定" />-->
+        </LinearLayout>
+    </LinearLayout>
+
+</FrameLayout>
