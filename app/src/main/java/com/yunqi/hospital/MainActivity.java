@@ -40,7 +40,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 
-public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback {
+public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback,WebViewInterFace {
 
     private ActivityMainBinding binding;
 
@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         webSettings.setJavaScriptEnabled(true); //支持js
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webSettings.setDomStorageEnabled(true);
-        JSInterface1 jsInterface = new JSInterface1(this);
+        JSInterface jsInterface = new JSInterface(this);
         binding.webView.addJavascriptInterface(jsInterface, "jsInterface");
 
         // 处理跨域
@@ -273,17 +273,12 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         super.onPause();
     }
 
-    String getDeviceSN() {
+    public String getDeviceSN() {
         if (TextUtils.isEmpty(Build.SERIAL) || "unknown".equals(Build.SERIAL)) {
             return "h123456";
         }
 
         return Build.SERIAL;
-    }
-
-    public void scanFace(View view) {
-//        loadHomePage();
-        this.scanFace("111");
     }
 
     public void scanFace(String callbackId) {

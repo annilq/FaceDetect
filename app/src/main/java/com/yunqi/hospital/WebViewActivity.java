@@ -53,7 +53,7 @@ import java.util.List;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 
-public class WebViewActivity extends AppCompatActivity {
+public class WebViewActivity extends AppCompatActivity implements WebViewInterFace {
 
     private ActivityWebviewBinding binding;
 
@@ -62,7 +62,7 @@ public class WebViewActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private String faceCallBackId;
-    ImageView mIvFace;
+
     private CameraView mCameraView;
     private Handler mBackgroundHandler;
     long lastModirTime;
@@ -84,7 +84,7 @@ public class WebViewActivity extends AppCompatActivity {
 
             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             Bitmap finalBitmap = bitmap;
-            runOnUiThread(() -> mIvFace.setImageBitmap(finalBitmap));
+            runOnUiThread(() -> binding.ivFacePic.setImageBitmap(finalBitmap));
         }
 
 //        @Override
@@ -135,7 +135,6 @@ public class WebViewActivity extends AppCompatActivity {
         loadHomePage();
 //        人脸识别部分
         mCameraView = findViewById(R.id.camera);
-        mIvFace = findViewById(R.id.iv_face_pic);
 
         if (mCameraView != null) {
             mCameraView.addCallback(mCallback);
@@ -232,6 +231,10 @@ public class WebViewActivity extends AppCompatActivity {
         binding.webView.post(() -> binding.webView.reload());
     }
 
+    public void reLaunch(View view) {
+        binding.webView.post(this::recreate);
+    }
+
     /**
      * 结果回调
      */
@@ -242,116 +245,12 @@ public class WebViewActivity extends AppCompatActivity {
     // ============ network request ==================
 
 
-    String getDeviceSN() {
+    public String getDeviceSN() {
         if (TextUtils.isEmpty(Build.SERIAL) || "unknown".equals(Build.SERIAL)) {
             return "h123456";
         }
 
         return Build.SERIAL;
-    }
-
-    /**
-     * 设备登录
-     */
-    public void login(String authCode) {
-        HashMap<String, String> params = new HashMap<>();
-        params.put("serialNo", getDeviceSN());
-        params.put("authCode", authCode);
-
-        ApiClient.getInstance().create(ApiService.class)
-                .login(params)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new ApiObserver<String>(this, true) {
-
-                    @Override
-                    public void onSuccess(String resp) {
-                        // 1. 保存authCode 和 deviceId
-                        SPUtils.getInstance().put(DeviceConstant.SpKey.auth_code, authCode);
-                        SPUtils.getInstance().put(DeviceConstant.SpKey.device_id, resp);
-
-                        // 2. 开始发送心跳
-                        if (TextUtils.isEmpty(SPUtils.getInstance().getString(DeviceConstant.SpKey.token))) {
-                            getToken(result -> Log.i("token", result));
-                        } else {
-
-                        }
-
-                        // 3. 跳转到首页
-                        loadHomePage();
-                    }
-                });
-    }
-
-    /**
-     * 获取token
-     */
-    public void getToken(OnResultListener onResultListener) {
-        HashMap<String, String> params = new HashMap<>();
-        params.put("id", SPUtils.getInstance().getString(DeviceConstant.SpKey.device_id));
-//        params.put("ipAddress", NetworkUtils.getIPAddress(true));
-//        params.put("macAddress", DeviceUtils.getMacAddress());
-        try {
-            // sha256(授权码+ 设备序列号)
-            params.put("refreshToken", sha256(SPUtils.getInstance().getString(DeviceConstant.SpKey.auth_code)
-                    + getDeviceSN()));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        ApiClient.getInstance().create(ApiService.class)
-                .getToken(params)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new ApiObserver<String>(this) {
-
-                    @Override
-                    public void onSuccess(String resp) {
-                        // 保存token
-                        SPUtils.getInstance().put(DeviceConstant.SpKey.token, resp);
-
-                        if (onResultListener != null) {
-                            onResultListener.onResult(resp);
-                        }
-                    }
-
-                    @Override
-                    public void onTokenInvalid(String message) {
-                        new AlertDialog.Builder(WebViewActivity.this)
-                                .setTitle("温馨提示")
-                                .setMessage("\n" + message)
-                                .setCancelable(false)
-                                .setPositiveButton("确认", (dialogInterface, i) -> {
-                                    // 跳转到登录页面
-                                    loadLoginPage();
-                                }).show();
-                    }
-
-                    @Override
-                    public void onFailure(String message) {
-                        new AlertDialog.Builder(WebViewActivity.this)
-                                .setTitle("温馨提示")
-                                .setMessage("\n" + message)
-                                .setCancelable(false)
-                                .setPositiveButton("重试", (dialogInterface, i) -> {
-                                    getToken(onResultListener);
-                                }).show();
-                    }
-                });
-    }
-
-    private String sha256(String s) throws NoSuchAlgorithmException {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] hash = digest.digest(s.getBytes(StandardCharsets.UTF_8));
-        StringBuilder hexString = new StringBuilder(2 * hash.length);
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                hexString.append('0');
-            }
-            hexString.append(hex);
-        }
-        return hexString.toString();
     }
 
 
@@ -370,15 +269,6 @@ public class WebViewActivity extends AppCompatActivity {
                         | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
     }
 
-
-    /**
-     * 禁用home
-     */
-//    @Override
-//    public void onAttachedToWindow() {
-//        this.getWindow().setType(WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG);
-//        super.onAttachedToWindow();
-//    }
 
     /**
      * 禁用回退键
@@ -475,7 +365,7 @@ public class WebViewActivity extends AppCompatActivity {
 //                    Log.i("janecer", "检测到有" + rects.size() + "人脸");
 ////                    可以在识别人脸时候马上结束，也可以用户拍照
 ////                    Bitmap finalBitmap = bitmap;
-////                    runOnUiThread(() -> mIvFace.setImageBitmap(finalBitmap));
+////                    runOnUiThread(() -> binding.ivFacePic.setImageBitmap(finalBitmap));
 ////                    mCameraView.stop();
 //                    for (int i = 0; i < rects.size(); i++) {//返回的rect就是在TexutView上面的人脸对应的实际坐标
 //                        Log.i("janecer", "rect : left " + rects.get(i).left + " top " + rects.get(i).top + "  right " + rects.get(i).right + "  bottom " + rects.get(i).bottom);
@@ -513,12 +403,12 @@ public class WebViewActivity extends AppCompatActivity {
     public void cancelDetect(View view) {
         mCameraView.stop();
         binding.cameralayer.setVisibility(View.GONE);
-        mIvFace.setImageDrawable(null);
+        binding.ivFacePic.setImageDrawable(null);
         this.loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','')");
     }
 
     public void endDetect(View view) {
-        Bitmap bitmap = ((BitmapDrawable) mIvFace.getDrawable()).getBitmap();
+        Bitmap bitmap = ((BitmapDrawable) binding.ivFacePic.getDrawable()).getBitmap();
 // 将Bitmap对象转换为字节数组，并使用Base64编码将其转换为字符串
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
@@ -526,7 +416,7 @@ public class WebViewActivity extends AppCompatActivity {
         String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
         mCameraView.stop();
         binding.cameralayer.setVisibility(View.GONE);
-        mIvFace.setImageDrawable(null);
+        binding.ivFacePic.setImageDrawable(null);
         this.loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','" + encoded + "')");
     }
 

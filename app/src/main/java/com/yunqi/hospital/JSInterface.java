@@ -1,4 +1,5 @@
 package com.yunqi.hospital;
+
 import static com.blankj.utilcode.util.ThreadUtils.runOnUiThread;
 
 import android.webkit.JavascriptInterface;
@@ -12,9 +13,9 @@ import java.util.HashMap;
 
 
 public class JSInterface {
-    public WebViewActivity webViewActivity;
+    public WebViewInterFace webViewActivity;
 
-    public JSInterface(WebViewActivity activity) {
+    public JSInterface(WebViewInterFace activity) {
         this.webViewActivity = activity;
     }
 
@@ -39,8 +40,10 @@ public class JSInterface {
         String jsonStr = gson.toJson(params);
         runOnUiThread(() -> webViewActivity.loadCallback("javascript:NativeBridge.NativeCallback('" + callbackId + "','" + jsonStr + "')"));
     }
+
     @JavascriptInterface
     public void scanFace(String callbackId) {
-        webViewActivity.scanFace(callbackId);
+
+        runOnUiThread(() -> webViewActivity.scanFace(callbackId));
     }
 }
