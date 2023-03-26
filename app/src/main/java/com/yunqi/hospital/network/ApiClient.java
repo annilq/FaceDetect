@@ -17,6 +17,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class ApiClient {
     public static final String TEST_URL = "http://ybzd.ncyunqi.com/ybzd-zzfw/";
     public static final String RELEASE_URL = "https://school-test.ncyunqi.com/classpad/";
+    public static final String local_URL = "http://192.168.0.96:8000/";
+//    public static String BASE_URL = local_URL;
     public static String BASE_URL = RELEASE_URL;
     private static final int TIME_OUT = 3; // 超时时间
 

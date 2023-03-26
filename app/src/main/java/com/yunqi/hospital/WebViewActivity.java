@@ -5,23 +5,18 @@ import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.graphics.YuvImage;
-import android.graphics.drawable.BitmapDrawable;
-import android.hardware.Camera;
+
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Message;
+
 import android.text.TextUtils;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-import android.widget.ImageView;
+
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -62,7 +57,7 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private String faceCallBackId;
-
+    private String base64Str;
     private CameraView mCameraView;
     private Handler mBackgroundHandler;
     long lastModirTime;
@@ -81,6 +76,7 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
         @Override
         public void onPictureTaken(CameraView cameraView, final byte[] data) {
             Log.i("take photo", "take photo-------------");
+            base64Str = Base64.encodeToString(data, Base64.DEFAULT);
 
             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             Bitmap finalBitmap = bitmap;
@@ -239,7 +235,10 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
      * 结果回调
      */
     public void loadCallback(final String url) {
-        binding.webView.post(() -> binding.webView.loadUrl(url));
+        runOnUiThread(() -> {
+            binding.webView.loadUrl(url);
+        });
+//        binding.webView.post(() -> binding.webView.loadUrl(url));
     }
 
     // ============ network request ==================
@@ -250,7 +249,8 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
             return "h123456";
         }
 
-        return Build.SERIAL;
+//        return Build.SERIAL;
+        return Build.SERIAL + System.currentTimeMillis();
     }
 
 
@@ -320,7 +320,7 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
 //        return mBackgroundHandler;
 //    }
 
-//    private class FaceThread implements Runnable {
+    //    private class FaceThread implements Runnable {
 //        private byte[] mData;
 //        private ByteArrayOutputStream mBitmapOutput;
 //        private Matrix mMatrix;
@@ -401,23 +401,15 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
     }
 
     public void cancelDetect(View view) {
-        mCameraView.stop();
-        binding.cameralayer.setVisibility(View.GONE);
-        binding.ivFacePic.setImageDrawable(null);
-        this.loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','')");
+        base64Str = "";
+        endDetect(view);
     }
 
     public void endDetect(View view) {
-        Bitmap bitmap = ((BitmapDrawable) binding.ivFacePic.getDrawable()).getBitmap();
-// 将Bitmap对象转换为字节数组，并使用Base64编码将其转换为字符串
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-        byte[] byteArray = byteArrayOutputStream.toByteArray();
-        String encoded = Base64.encodeToString(byteArray, Base64.DEFAULT);
         mCameraView.stop();
         binding.cameralayer.setVisibility(View.GONE);
         binding.ivFacePic.setImageDrawable(null);
-        this.loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','" + encoded + "')");
+        loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','" + base64Str + "')");
     }
 
     public void takePhoto(View view) {
@@ -426,8 +418,9 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
 
     public void reload(View view) {
 //        loadHomePage();
-        this.scanFace("111");
+        reload();
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
