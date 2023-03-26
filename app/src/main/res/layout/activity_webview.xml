@@ -14,69 +14,84 @@
         android:layout_gravity="bottom"
         android:onClick="reload"
         android:text="刷新" />
+    <!--        android:visibility="gone"-->
 
-    <SurfaceView
-        android:id="@+id/camerapreview"
+    <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#99000000"
-        android:visibility="gone"
-        />
-    <LinearLayout
         android:id="@+id/cameralayer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:background="#99000000"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <FrameLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="40dp">
-
-            <com.zhanyun.cameraface.camera.CameraView xmlns:app="http://schemas.android.com/apk/res-auto"
-                android:id="@+id/camera"
-                android:layout_width="300dp"
-                android:layout_height="200dp"
-                android:adjustViewBounds="true"
-                android:background="@android:color/black"
-                app:facing="back" />
-
-            <ImageView
-                android:id="@+id/iv_face_pic"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:layout_gravity="bottom|end" />
-
-        </FrameLayout>
+        android:visibility="gone"
+        >
 
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center">
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            app:layout_constraintDimensionRatio="W,5:7"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.5"
+            >
 
-            <Button
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_gravity="center"
+                >
+                <com.zhanyun.cameraface.camera.CameraView xmlns:app="http://schemas.android.com/apk/res-auto"
+                    android:id="@+id/camera"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:adjustViewBounds="true"
+                    android:background="@android:color/black"
+                    app:facing="back" />
+
+                <ImageView
+                    android:id="@+id/iv_face_pic"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="bottom|end" />
+            </FrameLayout>
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:onClick="cancelDetect"
-                android:layout_marginRight="10dp"
-                android:text="取消" />
+                android:layout_gravity="center">
 
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="10dp"
-                android:onClick="takePhoto"
-                android:text="拍照" />
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginRight="10dp"
+                    android:onClick="cancelDetect"
+                    android:text="取消" />
 
-            <Button
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:onClick="endDetect"
-                android:text="消课" />
+<!--                <Button-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_marginRight="10dp"-->
+<!--                    android:onClick="takePhoto"-->
+<!--                    android:text="拍照" />-->
+
+<!--                <Button-->
+<!--                    android:layout_width="wrap_content"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:onClick="endDetect"-->
+<!--                    android:text="消课" />-->
+                <Button
+                    android:id="@+id/confirm_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:onClick="confirmDetect"
+                    android:text="确定消课" />
+            </LinearLayout>
+
         </LinearLayout>
-    </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

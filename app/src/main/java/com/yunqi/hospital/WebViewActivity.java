@@ -58,7 +58,6 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
     private static final int REQUEST_CAMERA_PERMISSION = 1;
     private String faceCallBackId;
     private String base64Str;
-    private CameraView mCameraView;
     private Handler mBackgroundHandler;
     long lastModirTime;
     private CameraView.Callback mCallback = new CameraView.Callback() {
@@ -73,14 +72,22 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
             Log.d(TAG, "onCameraClosed");
         }
 
+//        @Override
+//        public void onPictureTaken(CameraView cameraView, final byte[] data) {
+//            Log.i("take photo", "take photo-------------");
+//            base64Str = Base64.encodeToString(data, Base64.DEFAULT);
+//
+//            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+//            Bitmap finalBitmap = bitmap;
+//            runOnUiThread(() -> binding.ivFacePic.setImageBitmap(finalBitmap));
+//        }
+//        拍照消课一起进行
         @Override
         public void onPictureTaken(CameraView cameraView, final byte[] data) {
             Log.i("take photo", "take photo-------------");
             base64Str = Base64.encodeToString(data, Base64.DEFAULT);
-
-            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-            Bitmap finalBitmap = bitmap;
-            runOnUiThread(() -> binding.ivFacePic.setImageBitmap(finalBitmap));
+//            runOnUiThread(()->endDetect(binding.confirmButton));
+            endDetect(binding.camera);
         }
 
 //        @Override
@@ -130,10 +137,9 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
 
         loadHomePage();
 //        人脸识别部分
-        mCameraView = findViewById(R.id.camera);
 
-        if (mCameraView != null) {
-            mCameraView.addCallback(mCallback);
+        if (binding.camera != null) {
+            binding.camera.addCallback(mCallback);
         }
     }
 
@@ -306,7 +312,7 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
 
     @Override
     protected void onPause() {
-        mCameraView.stop();
+        binding.camera.stop();
         super.onPause();
     }
 
@@ -330,7 +336,7 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
 //            mData = data;
 //            mBitmapOutput = new ByteArrayOutputStream();
 //            mMatrix = new Matrix();
-//            int mOrienta = mCameraView.getCameraDisplayOrientation();
+//            int mOrienta = binding.camera.getCameraDisplayOrientation();
 //            mMatrix.postRotate(mOrienta * -1);
 //            mMatrix.postScale(-1, 1);//默认是前置摄像头，直接写死 -1 。
 //            mCamera = camera;
@@ -366,7 +372,7 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
 ////                    可以在识别人脸时候马上结束，也可以用户拍照
 ////                    Bitmap finalBitmap = bitmap;
 ////                    runOnUiThread(() -> binding.ivFacePic.setImageBitmap(finalBitmap));
-////                    mCameraView.stop();
+////                    binding.camera.stop();
 //                    for (int i = 0; i < rects.size(); i++) {//返回的rect就是在TexutView上面的人脸对应的实际坐标
 //                        Log.i("janecer", "rect : left " + rects.get(i).left + " top " + rects.get(i).top + "  right " + rects.get(i).right + "  bottom " + rects.get(i).bottom);
 //                    }
@@ -397,7 +403,7 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
     public void scanFace(String callbackId) {
         faceCallBackId = callbackId;
         binding.cameralayer.setVisibility(View.VISIBLE);
-        mCameraView.start();
+        binding.camera.start();
     }
 
     public void cancelDetect(View view) {
@@ -406,14 +412,19 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
     }
 
     public void endDetect(View view) {
-        mCameraView.stop();
         binding.cameralayer.setVisibility(View.GONE);
         binding.ivFacePic.setImageDrawable(null);
         loadCallback("javascript:NativeBridge.NativeCallback('" + faceCallBackId + "','" + base64Str + "')");
+//        binding.camera.stop();
+    }
+
+//
+    public void confirmDetect(View view) {
+        binding.camera.takePicture();
     }
 
     public void takePhoto(View view) {
-        mCameraView.takePicture();
+        binding.camera.takePicture();
     }
 
     public void reload(View view) {
