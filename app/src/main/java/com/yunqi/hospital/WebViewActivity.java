@@ -403,6 +403,14 @@ public class WebViewActivity extends AppCompatActivity implements WebViewInterFa
     public void scanFace(String callbackId) {
         faceCallBackId = callbackId;
         binding.cameralayer.setVisibility(View.VISIBLE);
+
+        binding.camera.setCameraDistance(100);
+        binding.camera.start();
+    }
+    public void scanFace(View view) {
+        binding.cameralayer.setVisibility(View.VISIBLE);
+
+        binding.camera.setCameraDistance(1000);
         binding.camera.start();
     }
 
