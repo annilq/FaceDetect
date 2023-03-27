@@ -27,14 +27,7 @@
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
-            <!-- 即将关机广播 -->
-            <intent-filter android:priority="1000">
-                <action android:name="android.intent.action.ACTION_SHUTDOWN" />
-            </intent-filter>
         </receiver>
-        <service
-            android:name=".service.ShutdownService"
-            android:exported="false" />
         <activity
             android:name=".WebViewActivity"
             android:exported="true"
